@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/META7.CaptainM7A/META7.CaptainM7A.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/META7.CaptainM7A.Tests/META7.CaptainM7A.Tests.csproj" />
+  </Folder>
+</Solution>
