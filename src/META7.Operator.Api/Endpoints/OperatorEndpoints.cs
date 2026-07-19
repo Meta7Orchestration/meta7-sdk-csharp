@@ -20,13 +20,14 @@ internal static class OperatorEndpoints
 
             return result.Status switch
             {
-                OperatorExecutionStatus.Succeeded     => Results.Ok(result),
-                OperatorExecutionStatus.SafeLocked    => Results.StatusCode(423),
-                OperatorExecutionStatus.Expired       => Results.UnprocessableEntity(result),
+                OperatorExecutionStatus.Succeeded       => Results.Ok(result),
+                // 423 Locked (WebDAV, RFC 4918): resource is locked — used here to signal SAFE_LOCK active
+                OperatorExecutionStatus.SafeLocked      => Results.Json(result, statusCode: 423),
+                OperatorExecutionStatus.Expired         => Results.UnprocessableEntity(result),
                 OperatorExecutionStatus.PolicyViolation => Results.UnprocessableEntity(result),
-                OperatorExecutionStatus.Rejected      => Results.UnprocessableEntity(result),
-                OperatorExecutionStatus.Failed        => Results.StatusCode(500),
-                _                                     => Results.StatusCode(500)
+                OperatorExecutionStatus.Rejected        => Results.UnprocessableEntity(result),
+                OperatorExecutionStatus.Failed          => Results.Json(result, statusCode: 500),
+                _                                       => Results.Json(result, statusCode: 500)
             };
         })
         .WithName("PostDirective")

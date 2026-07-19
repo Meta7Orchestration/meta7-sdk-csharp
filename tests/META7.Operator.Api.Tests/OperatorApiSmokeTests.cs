@@ -117,8 +117,12 @@ public sealed class OperatorApiSmokeTests : IClassFixture<WebApplicationFactory<
 
         var response = await client.PostAsJsonAsync("/v1/directives", directive);
 
-        // HTTP 423 Locked
+        // HTTP 423 Locked (RFC 4918) — SAFE_LOCK active
         Assert.Equal(423, (int)response.StatusCode);
+
+        var result = await response.Content.ReadFromJsonAsync<OperatorResult>(JsonOptions);
+        Assert.NotNull(result);
+        Assert.Equal(OperatorExecutionStatus.SafeLocked, result!.Status);
     }
 
     // ── /v1/directives — happy path ───────────────────────────────────────────
