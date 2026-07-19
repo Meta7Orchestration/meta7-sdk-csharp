@@ -23,27 +23,21 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: 📦 Restore
-        run: dotnet restore meta7-sdk-csharp/META7.CaptainM7A.csproj
+        run: dotnet restore META7.CaptainM7A.sln
 
       - name: 🔨 Build
-        run: dotnet build meta7-sdk-csharp/META7.CaptainM7A.csproj --configuration Release --no-restore
+        run: dotnet build META7.CaptainM7A.sln --configuration Release --no-restore
 
-      - name: 🧪 Run Demos
+      - name: 🧪 Run smoke tests
         run: |
-          cd meta7-sdk-csharp
-          dotnet run --configuration Release 2>&1 | tee run-output.txt
-          if grep -q "ASSERTION FAILED\|Demo Error" run-output.txt; then
-            echo "❌ Demo failures detected!"
-            exit 1
-          fi
-          echo "✅ All 20 demos passed"
+          dotnet test tests/META7.CaptainM7A.Tests/META7.CaptainM7A.Tests.csproj --configuration Release --no-build 2>&1 | tee run-output.txt
 
       - name: 📊 Upload output
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pr-demo-output-${{ github.event.pull_request.number }}
-          path: meta7-sdk-csharp/run-output.txt
+          path: run-output.txt
 
   # ══════════════════════════════════════════════════════════════
   # JOB 2: PR TITLE CHECK
