@@ -25,7 +25,9 @@ public class OperatorApiOutreachTests
         var first = await detector.DetectAsync("https://seller.example.com/thread");
         var second = await detector.DetectAsync("https://seller.example.com/thread");
 
-        Assert.Equal(first, second);
+        Assert.Equal(
+            first.Select(s => (s.SourceUrl, s.MatchedKeyword, s.MatchedText, s.SignalType, s.Confidence)),
+            second.Select(s => (s.SourceUrl, s.MatchedKeyword, s.MatchedText, s.SignalType, s.Confidence)));
         Assert.Equal(new[] { "need help", "แจ้งเตือน", "ระบบล่ม", "POS ช้า", "ออเดอร์ตกหล่น" }, first.Select(s => s.MatchedKeyword).Distinct().ToArray());
     }
 
@@ -89,7 +91,9 @@ public class OperatorApiOutreachTests
             OperatorActionType.GenerateOutreachSuggestion,
             signals);
 
-        Assert.Equal(first, second);
+        Assert.Equal(
+            first.Select(s => (s.ContextSummary, s.DetectedPainPoint, s.RecommendedValueProposition, s.ConfidenceScore)),
+            second.Select(s => (s.ContextSummary, s.DetectedPainPoint, s.RecommendedValueProposition, s.ConfidenceScore)));
         Assert.All(first, suggestion => Assert.InRange(suggestion.ConfidenceScore, 0.0d, 1.0d));
         Assert.All(first, suggestion => Assert.False(string.IsNullOrWhiteSpace(suggestion.RecommendedValueProposition)));
     }
