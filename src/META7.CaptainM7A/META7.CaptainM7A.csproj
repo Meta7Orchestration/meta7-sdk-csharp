@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>META7.CaptainM7A</AssemblyName>
+    <RootNamespace>META7.CaptainM7A</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Include existing source files from parent src/ directory -->
+  <ItemGroup>
+    <Compile Include="..\META7.CaptainM7A.Core.cs" />
+    <Compile Include="..\META7.CaptainM7A.Layer16to20.cs" />
+    <Compile Include="..\META7.CaptainM7A.Layer21to30.cs" />
+  </ItemGroup>
+
+</Project>
