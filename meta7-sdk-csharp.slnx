@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/META7.Operator.Api/META7.Operator.Api.csproj" />
+    <Project Path="src/META7.Operator.Contracts/META7.Operator.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/META7.Operator.Api.Tests/META7.Operator.Api.Tests.csproj" />
+  </Folder>
+</Solution>
