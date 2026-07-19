@@ -1,0 +1,56 @@
+## .NET / C#
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## NuGet
+*.nupkg
+*.snupkg
+nupkg/
+packages/
+!**/packages/repositories.config
+*.nuget.props
+*.nuget.targets
+
+## Build output
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## IDE
+.idea/
+*.iml
+.vscode/settings.json
+*.code-workspace
+
+## Test output
+run-output.txt
+vuln-report.txt
+TestResults/
+
+## Secrets (never commit these!)
+*.env
+.env
+secrets.json
+appsettings.Development.json

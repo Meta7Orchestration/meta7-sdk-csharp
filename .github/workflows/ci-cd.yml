@@ -1,0 +1,258 @@
+name: META7 Captain M7A SDK — CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Force deploy to meta7.hopecplus.com'
+        required: false
+        default: 'false'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_PATH: 'meta7-sdk-csharp/META7.CaptainM7A.csproj'
+  DEPLOY_HOST: 'web3.vpsthai.net'
+  DEPLOY_USER: 'kjyxwyac'
+  DEPLOY_PATH: '/domains/meta7.hopecplus.com/public_html'
+
+jobs:
+  # ══════════════════════════════════════════════════════════════
+  # JOB 1: BUILD & TEST
+  # ══════════════════════════════════════════════════════════════
+  build-and-test:
+    name: 🔨 Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: 🔨 Build (Release)
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+
+      - name: 🧪 Run Demos (smoke test)
+        run: |
+          cd meta7-sdk-csharp
+          dotnet run --configuration Release 2>&1 | tee run-output.txt
+          # Fail if any demo failed
+          if grep -q "ASSERTION FAILED\|Demo Error" run-output.txt; then
+            echo "❌ Demo failures detected!"
+            cat run-output.txt
+            exit 1
+          fi
+          echo "✅ All demos passed"
+
+      - name: 📊 Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demo-output
+          path: meta7-sdk-csharp/run-output.txt
+
+  # ══════════════════════════════════════════════════════════════
+  # JOB 2: PACK NUGET (on tag or main)
+  # ══════════════════════════════════════════════════════════════
+  pack-nuget:
+    name: 📦 Pack NuGet
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: 📦 Pack NuGet package
+        run: |
+          VERSION="${{ github.ref_name }}"
+          # Strip 'v' prefix if tag
+          VERSION="${VERSION#v}"
+          # Use 2.0.0 as default if not a tag
+          if [[ "$VERSION" == "main" || "$VERSION" == "develop" ]]; then
+            VERSION="2.0.0-preview.$(date +%Y%m%d%H%M)"
+          fi
+          echo "Packing version: $VERSION"
+          dotnet pack ${{ env.PROJECT_PATH }} \
+            --configuration Release \
+            --output ./nupkg \
+            -p:PackageVersion=$VERSION \
+            --no-build
+
+      - name: 📤 Upload NuGet artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ./nupkg/*.nupkg
+
+  # ══════════════════════════════════════════════════════════════
+  # JOB 3: BUILD WEB DASHBOARD (meta7.hopecplus.com)
+  # ══════════════════════════════════════════════════════════════
+  build-web:
+    name: 🌐 Build Web Dashboard
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' || github.event.inputs.deploy == 'true'
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Prepare deploy package
+        run: |
+          mkdir -p deploy-package
+
+          # Copy hopecplus-v2 website if exists
+          if [ -d "hopecplus-v2" ]; then
+            cp -r hopecplus-v2/. deploy-package/
+            echo "✅ Copied hopecplus-v2"
+          fi
+
+          # Copy super-xaou app if exists
+          if [ -d "super-xaou/dist" ]; then
+            mkdir -p deploy-package/super-xaou
+            cp -r super-xaou/dist/. deploy-package/super-xaou/
+            echo "✅ Copied super-xaou dist"
+          fi
+
+          # Generate SDK info page
+          cat > deploy-package/sdk-info.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="th">
+          <head>
+            <meta charset="UTF-8">
+            <title>META7 Captain M7A SDK</title>
+            <style>
+              body { font-family: 'Fira Code', monospace; background: #050505; color: #F2F2F3; padding: 2rem; }
+              h1 { color: #8b5cf6; }
+              .badge { background: #1a1a2e; border: 1px solid #8b5cf6; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block; margin: 0.5rem; }
+              .green { color: #10b981; }
+              .cyan { color: #06b6d4; }
+            </style>
+          </head>
+          <body>
+            <h1>🛡️ META7 Captain M7A SDK v2.0</h1>
+            <p class="cyan">Deterministic Cognitive Runtime — จดจำไว้ แล้วไปด้วยกัน</p>
+            <div>
+              <span class="badge green">✅ Build: Passing</span>
+              <span class="badge">📦 .NET 10.0</span>
+              <span class="badge">🧪 20 Demos</span>
+              <span class="badge">🔒 15 Layers</span>
+            </div>
+            <p>Deployed: $(date -u +"%Y-%m-%d %H:%M UTC")</p>
+          </body>
+          </html>
+          EOF
+
+          echo "📦 Deploy package contents:"
+          ls -la deploy-package/
+
+      - name: 📤 Upload deploy package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy-package/
+
+  # ══════════════════════════════════════════════════════════════
+  # JOB 4: DEPLOY TO meta7.hopecplus.com (FTP)
+  # ══════════════════════════════════════════════════════════════
+  deploy:
+    name: 🚀 Deploy to meta7.hopecplus.com
+    runs-on: ubuntu-latest
+    needs: [build-and-test, build-web]
+    if: github.ref == 'refs/heads/main' || github.event.inputs.deploy == 'true'
+    environment:
+      name: production
+      url: https://meta7.hopecplus.com
+
+    steps:
+      - name: 📥 Download deploy package
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-package
+          path: ./deploy-package
+
+      - name: 🚀 Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./deploy-package/
+          server-dir: /domains/meta7.hopecplus.com/public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/*.log
+
+      - name: ✅ Verify deployment
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "https://meta7.hopecplus.com")
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" = "200" ] || [ "$STATUS" = "301" ] || [ "$STATUS" = "302" ]; then
+            echo "✅ Deployment verified — meta7.hopecplus.com is live"
+          else
+            echo "⚠️ Unexpected status: $STATUS (may still be propagating)"
+          fi
+
+  # ══════════════════════════════════════════════════════════════
+  # JOB 5: RELEASE (on tag)
+  # ══════════════════════════════════════════════════════════════
+  release:
+    name: 🎉 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [pack-nuget, deploy]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Download NuGet package
+        uses: actions/download-artifact@v4
+        with:
+          name: nuget-package
+          path: ./nupkg
+
+      - name: 🎉 Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./nupkg/*.nupkg
+          body: |
+            ## META7 Captain M7A SDK ${{ github.ref_name }}
+
+            ### 🛡️ Deterministic Cognitive Runtime
+            จดจำไว้ แล้วไปด้วยกัน
+
+            ### ✅ What's included
+            - 15 Layers (Core Types → Command Simulation)
+            - Canonical Event Contract + Meaning Stone
+            - 20 Demos — all passing
+            - Barrier Network MB-SYNC-001
+            - Audit Ledger + Replay Engine
+            - Sovereign Control Plane
+
+            ### 📦 Installation
+            ```bash
+            dotnet add package META7.CaptainM7A --version ${{ github.ref_name }}
+            ```
+          draft: false
+          prerelease: false
