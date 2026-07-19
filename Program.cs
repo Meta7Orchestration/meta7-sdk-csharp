@@ -440,7 +440,7 @@ if (RunDemo("Demo18 — Layer 18: Fault Tolerance & Circuit Breaker", () =>
         return false;
     });
     Verify(!fail, "Operation that always returns false should report failure");
-    Verify(callCount == 2, $"RetryPolicy with maxAttempts=2 must retry exactly 2 times — got {callCount}");
+    Verify(callCount == 2, $"RetryPolicy with maxAttempts=2 must execute exactly 2 times total — got {callCount}");
 })) totalPassed++; else totalFailed++;
 
 // ── Demo19 — Layer 19: Advanced Telemetry & Observability ────────────────────
