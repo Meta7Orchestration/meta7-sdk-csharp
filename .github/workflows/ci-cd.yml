@@ -19,8 +19,8 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  PROJECT_PATH: 'META7.CaptainM7A.csproj'
-  TEST_PROJECT_PATH: 'tests/META7.CaptainM7A.Tests.csproj'
+  PROJECT_PATH: 'src/META7.CaptainM7A/META7.CaptainM7A.csproj'
+  TEST_PROJECT_PATH: 'tests/META7.CaptainM7A.Tests/META7.CaptainM7A.Tests.csproj'
   SOLUTION_PATH: 'META7.CaptainM7A.sln'
   DEPLOY_HOST: 'web3.vpsthai.net'
   DEPLOY_PATH: '/domains/meta7.hopecplus.com/public_html'
@@ -69,34 +69,19 @@ jobs:
           echo "📦 Version: $VERSION (release=$IS_RELEASE)"
 
       - name: 📦 Restore dependencies
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: 🔨 Build (Release)
         run: |
-          dotnet build ${{ env.PROJECT_PATH }} \
+          dotnet build ${{ env.SOLUTION_PATH }} \
             --configuration Release \
             --no-restore \
             -p:Version=${{ steps.version.outputs.version }} \
             -p:TreatWarningsAsErrors=false
 
-      - name: 🧪 Run Demo 01-30 (smoke test)
+      - name: 🧪 Run smoke tests
         run: |
-          dotnet run --configuration Release --no-build 2>&1 | tee run-output.txt
-          echo "--- Demo Output Summary ---"
-          PASSED=$(grep -c "✅.*passed" run-output.txt || true)
-          FAILED=$(grep -c "ASSERTION FAILED\|Demo Error" run-output.txt || true)
-          echo "✅ Passed: $PASSED"
-          echo "❌ Failed: $FAILED"
-          if [ "$FAILED" -gt "0" ]; then
-            echo "❌ Demo failures detected!"
-            grep "ASSERTION FAILED\|Demo Error" run-output.txt
-            exit 1
-          fi
-          if [ "$PASSED" -lt "30" ]; then
-            echo "⚠️ Expected 30 demos to pass, got $PASSED"
-            exit 1
-          fi
-          echo "✅ All $PASSED demos passed!"
+          dotnet test ${{ env.TEST_PROJECT_PATH }} --configuration Release --no-build 2>&1 | tee run-output.txt
 
       - name: 📊 Upload smoke test output
         uses: actions/upload-artifact@v4
@@ -124,10 +109,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: 📦 Restore
-        run: dotnet restore ${{ env.PROJECT_PATH }}
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
 
       - name: 🔨 Build
-        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
       - name: 🧪 Create xUnit test project (if not exists)
         run: |
