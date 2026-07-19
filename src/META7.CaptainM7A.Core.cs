@@ -10,6 +10,9 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using META7.CaptainM7A.Safety.SafeLock.Abstractions;
+using META7.CaptainM7A.Safety.SafeLock.Domain;
+using META7.CaptainM7A.Safety.SafeLock.Services;
 
 namespace META7.CaptainM7A
 {
@@ -80,12 +83,17 @@ namespace META7.CaptainM7A
     public class M7AStrategicCommander
     {
         private readonly StrategicIntelligence _intel = new();
+        private readonly ISafeLock _safeLock;
         private SystemState _state = SystemState.NORMAL;
-        public SystemState State => _state;
+
+        public M7AStrategicCommander(ISafeLock? safeLock = null)
+            => _safeLock = safeLock ?? new SafeLockController();
+
+        public SystemState State => _safeLock.IsActive ? SystemState.SAFE_LOCK : _state;
 
         public (bool CanLaunch, string Reason) EvaluateLaunch(BattlefieldMetrics metrics)
         {
-            if (_state == SystemState.SAFE_LOCK)
+            if (_safeLock.IsActive)
                 return (false, "SAFE_LOCK active — all launches blocked");
             if (_state == SystemState.HALTED)
                 return (false, "System HALTED");
@@ -101,8 +109,15 @@ namespace META7.CaptainM7A
             return (true, $"Launch approved — coherence={coherence.Score:F2}");
         }
 
-        public void ActivateSafeLock()  => _state = SystemState.SAFE_LOCK;
-        public void ReleaseSafeLock()   => _state = SystemState.NORMAL;
+        public void ActivateSafeLock()
+            => _safeLock.Activate(SafeLockReason.Manual, "COMMANDER", "SAFE_LOCK active — all launches blocked");
+
+        public void ReleaseSafeLock()
+        {
+            _safeLock.Release(_safeLock.Version, SafeLockReason.Manual, "COMMANDER", "SAFE_LOCK released");
+            _state = SystemState.NORMAL;
+        }
+
         public void Halt()              => _state = SystemState.HALTED;
         public void Resync()            => _state = SystemState.RESYNC;
     }
@@ -166,13 +181,33 @@ namespace META7.CaptainM7A
 
     public class CommandGateway
     {
-        private bool _safeLockActive = false;
+        private readonly ISafeLockStateReader _safeLock;
+        private readonly Action _activateSafeLock;
+        private readonly Action _releaseSafeLock;
         private double _budgetUsed   = 0;
         private const double BudgetLimit = 90.0;
 
+        public CommandGateway(ISafeLockStateReader? safeLockStateReader = null,
+            Action? activateSafeLock = null,
+            Action? releaseSafeLock = null)
+        {
+            if (safeLockStateReader is null)
+            {
+                var safeLock = new SafeLockController();
+                _safeLock = safeLock;
+                _activateSafeLock = () => safeLock.Activate(SafeLockReason.Compatibility, "GATEWAY", "SAFE_LOCK active");
+                _releaseSafeLock = () => safeLock.Release(safeLock.Version, SafeLockReason.Compatibility, "GATEWAY", "SAFE_LOCK released");
+                return;
+            }
+
+            _safeLock = safeLockStateReader;
+            _activateSafeLock = activateSafeLock ?? throw new InvalidOperationException("SAFE_LOCK activation is not configured");
+            _releaseSafeLock = releaseSafeLock ?? throw new InvalidOperationException("SAFE_LOCK release is not configured");
+        }
+
         public GatewayResult Evaluate(Directive directive, double costEstimate = 5.0)
         {
-            if (_safeLockActive)
+            if (_safeLock.IsActive)
                 return new GatewayResult(GatewayVerdict.BLOCKED_SAFELOCK,
                     "SAFE_LOCK active", null);
 
@@ -189,8 +224,8 @@ namespace META7.CaptainM7A
                 $"Approved — budget used: {_budgetUsed:F1}%", directive);
         }
 
-        public void ActivateSafeLock() => _safeLockActive = true;
-        public void ReleaseSafeLock()  => _safeLockActive = false;
+        public void ActivateSafeLock() => _activateSafeLock();
+        public void ReleaseSafeLock()  => _releaseSafeLock();
         public double BudgetUsed       => _budgetUsed;
     }
 
@@ -300,15 +335,19 @@ namespace META7.CaptainM7A
 
     public class SovereignControlPlane
     {
+        private readonly ISafeLock _safeLock;
         private SovereignMode _mode = SovereignMode.NORMAL;
         private readonly AuditLedger _ledger = new();
         private readonly List<string> _commandLog = new();
 
-        public SovereignMode Mode => _mode;
+        public SovereignControlPlane(ISafeLock? safeLock = null)
+            => _safeLock = safeLock ?? new SafeLockController();
+
+        public SovereignMode Mode => _safeLock.IsActive ? SovereignMode.SAFE_LOCK : _mode;
 
         public bool IssueCommand(string commandId, string payload, AgentRole issuer)
         {
-            if (_mode == SovereignMode.SAFE_LOCK)
+            if (_safeLock.IsActive)
             {
                 _ledger.Append(EventType.SafeLockActivated, issuer.ToString(),
                     $"BLOCKED:{commandId}");
@@ -321,12 +360,13 @@ namespace META7.CaptainM7A
 
         public void ActivateSafeLock(string reason)
         {
-            _mode = SovereignMode.SAFE_LOCK;
+            _safeLock.Activate(SafeLockReason.Sovereign, "SOVEREIGN", reason, reason);
             _ledger.Append(EventType.SafeLockActivated, "SOVEREIGN", reason);
         }
 
         public void ReleaseSafeLock()
         {
+            _safeLock.Release(_safeLock.Version, SafeLockReason.Manual, "SOVEREIGN", "Manual release", "Manual release");
             _mode = SovereignMode.NORMAL;
             _ledger.Append(EventType.SafeLockReleased, "SOVEREIGN", "Manual release");
         }
@@ -566,7 +606,9 @@ namespace META7.CaptainM7A
         private long _sequence = 0;
         private int  _epoch    = 1;
         private string _lastHash = "GENESIS";
-        private bool _safeLockActive = false;
+        private readonly ISafeLockStateReader _safeLock;
+        private readonly Action _activateSafeLock;
+        private readonly Action _releaseSafeLock;
         private readonly MeaningStoneRepository _stoneRepo = new();
 
         private static readonly HashSet<EventType> _safeLockBlocked = new()
@@ -574,9 +616,27 @@ namespace META7.CaptainM7A
             EventType.LaunchExecuted, EventType.DirectiveIssued, EventType.EpochAdvanced
         };
 
+        public CanonicalEventStore(ISafeLockStateReader? safeLockStateReader = null,
+            Action? activateSafeLock = null,
+            Action? releaseSafeLock = null)
+        {
+            if (safeLockStateReader is null)
+            {
+                var safeLock = new SafeLockController();
+                _safeLock = safeLock;
+                _activateSafeLock = () => safeLock.Activate(SafeLockReason.Store, "STORE", "SafeLock activated", "SafeLock activated");
+                _releaseSafeLock = () => safeLock.Release(safeLock.Version, SafeLockReason.Store, "STORE", "SafeLock released", "SafeLock released");
+                return;
+            }
+
+            _safeLock = safeLockStateReader;
+            _activateSafeLock = activateSafeLock ?? throw new InvalidOperationException("SAFE_LOCK activation is not configured");
+            _releaseSafeLock = releaseSafeLock ?? throw new InvalidOperationException("SAFE_LOCK release is not configured");
+        }
+
         public CanonicalEvent Append(EventType type, string actorId, string payload)
         {
-            if (_safeLockActive && _safeLockBlocked.Contains(type))
+            if (_safeLock.IsActive && _safeLockBlocked.Contains(type))
                 throw new InvalidOperationException($"SAFE_LOCK blocks {type}");
 
             _sequence++;
@@ -588,13 +648,13 @@ namespace META7.CaptainM7A
 
         public void ActivateSafeLock()
         {
-            _safeLockActive = true;
+            _activateSafeLock();
             Append(EventType.SafeLockActivated, "STORE", "SafeLock activated");
         }
 
         public void ReleaseSafeLock()
         {
-            _safeLockActive = false;
+            _releaseSafeLock();
             Append(EventType.SafeLockReleased, "STORE", "SafeLock released");
         }
 
@@ -620,7 +680,7 @@ namespace META7.CaptainM7A
 
         public IReadOnlyList<CanonicalEvent> Events => _events.AsReadOnly();
         public long LastSequence => _sequence;
-        public bool SafeLockActive => _safeLockActive;
+        public bool SafeLockActive => _safeLock.IsActive;
         public MeaningStoneRepository Stones => _stoneRepo;
     }
 

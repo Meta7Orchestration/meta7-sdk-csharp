@@ -15,6 +15,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using META7.CaptainM7A.Safety.SafeLock.Abstractions;
 
 namespace META7.CaptainM7A
 {
@@ -64,15 +65,26 @@ namespace META7.CaptainM7A
             public class DistributedCommandRouter
     {
         private readonly List<AgentShard> _shards = new();
-        private int _roundRobinIndex = 0;
-        private readonly object _lock = new();
+                private readonly ISafeLockStateReader? _safeLock;
+                private int _roundRobinIndex = 0;
+                private readonly object _lock = new();
 
-        public void RegisterShard(AgentShard shard) { lock (_lock) _shards.Add(shard); }
+                public DistributedCommandRouter(ISafeLockStateReader? safeLock = null)
+                    => _safeLock = safeLock;
+
+                public void RegisterShard(AgentShard shard) { lock (_lock) _shards.Add(shard); }
 
         public IReadOnlyList<AgentShard> Shards => _shards.AsReadOnly();
 
         public RoutingResult Route(Directive directive, RoutingStrategy strategy = RoutingStrategy.HashMod)
         {
+            if (_safeLock?.IsActive == true)
+            {
+                return new RoutingResult(false,
+                    new RouteDecision(directive.Id, AgentRole.COMMANDER, -1, strategy, "SAFE_LOCK active"),
+                    "SAFE_LOCK active", DateTime.UtcNow);
+            }
+
             List<AgentShard> healthy;
             lock (_lock) { healthy = _shards.Where(s => s.IsHealthy).ToList(); }
 

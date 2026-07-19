@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Include="..\META7.CaptainM7A.Core.cs" Link="META7.CaptainM7A.Core.cs" />
+    <Compile Include="..\META7.CaptainM7A.Layer16to20.cs" Link="META7.CaptainM7A.Layer16to20.cs" />
+    <Compile Include="..\META7.CaptainM7A.Layer21to30.cs" Link="META7.CaptainM7A.Layer21to30.cs" />
+  </ItemGroup>
+
 </Project>
