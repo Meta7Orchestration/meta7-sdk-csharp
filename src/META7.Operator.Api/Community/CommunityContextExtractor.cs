@@ -64,6 +64,8 @@ public sealed class CommunityContextExtractor
         };
     }
 
+    private const int MaxExcerptLength = 60;
+
     /// <summary>
     /// Extracts analytical signals from a list of posts.
     /// </summary>
@@ -105,7 +107,7 @@ public sealed class CommunityContextExtractor
             // Topic frequency: high-reaction posts are trending topics
             if (post.ReactionCount >= 5)
             {
-                var excerpt = post.Content.Length > 60 ? post.Content[..60] + "…" : post.Content;
+                var excerpt = post.Content.Length > MaxExcerptLength ? post.Content[..MaxExcerptLength] + "…" : post.Content;
                 topicFrequency[excerpt] = topicFrequency.GetValueOrDefault(excerpt) + post.ReactionCount;
             }
         }
