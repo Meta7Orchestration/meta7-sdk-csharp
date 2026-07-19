@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>META7.Operator.Api</AssemblyName>
+    <RootNamespace>META7.Operator.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\META7.Operator.Contracts\META7.Operator.Contracts.csproj" />
+    <ProjectReference Include="..\META7.CaptainM7A\META7.CaptainM7A.csproj" />
+  </ItemGroup>
+
+</Project>
