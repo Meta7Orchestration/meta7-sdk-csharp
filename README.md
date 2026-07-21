@@ -85,16 +85,5 @@ META7 Captain M7A SDK — 30 Layers
 - `BarrierConsistency` — ENFORCED
 - `ActionSafety` — ENFORCED
 
-## 📦 GitHub Secrets Required
-
-For CI/CD deployment, set these secrets in GitHub:
-
-| Secret | Value |
-|--------|-------|
-| `FTP_HOST` | `web3.vpsthai.net` |
-| `FTP_USERNAME` | `kjyxwyac` |
-| `FTP_PASSWORD` | *(your FTP password)* |
-
----
 
 *META7 Orbital Engine v1.4 — HopeCpluS Foundation*
