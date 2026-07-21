@@ -45,7 +45,7 @@ namespace META7.CaptainM7A
         public bool IsHealthy { get; private set; } = true;
         private int _processedCount;
         public int ProcessedCount => _processedCount;
-        private readonly Queue<Directive> _inbox = new();
+        private readonly System.Collections.Concurrent.ConcurrentQueue<Directive> _inbox = new();
 
         public AgentShard(AgentRole role, int shardIndex)
         {
@@ -57,7 +57,7 @@ namespace META7.CaptainM7A
         public int QueueDepth => _inbox.Count;
         public void MarkUnhealthy() => IsHealthy = false;
         public void MarkHealthy()   => IsHealthy = true;
-        public Directive? Dequeue() => _inbox.Count > 0 ? _inbox.Dequeue() : null;
+        public Directive? Dequeue() => _inbox.TryDequeue(out var d) ? d : null;
     }
 
     
