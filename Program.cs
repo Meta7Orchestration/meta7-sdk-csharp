@@ -101,8 +101,8 @@ if (RunDemo("Demo03 — Layer 3: M7A Strategic Commander", () =>
     Verify(canLaunch, $"Should approve normal launch — reason: {reason}");
 
     commander.ActivateSafeLock();
-    var (blocked, _) = commander.EvaluateLaunch(normalMetrics);
-    Verify(!blocked, "SAFE_LOCK must block all launches");
+    var (canLaunchWhenSafeLocked, _) = commander.EvaluateLaunch(normalMetrics);
+    Verify(!canLaunchWhenSafeLocked, "SAFE_LOCK must block all launches");
 
     commander.ReleaseSafeLock();
     var (released, _) = commander.EvaluateLaunch(normalMetrics);
