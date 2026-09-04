@@ -230,7 +230,6 @@ namespace META7.CaptainM7A
             _state = BarrierState.RELEASED;
             _epoch++;
             _checkedIn.Clear();
-            _state = BarrierState.OPEN;
             return true;
         }
 
