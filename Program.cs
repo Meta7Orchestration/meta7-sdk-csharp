@@ -32,9 +32,10 @@ static bool RunDemo(string label, Action demo)
         Console.WriteLine($"✅ {label} passed");
         return true;
     }
-    catch (InvalidOperationException ex)
+    catch (Exception ex)
     {
-        Console.WriteLine($"ASSERTION FAILED: {label} — {ex.Message}");
+        var prefix = ex is InvalidOperationException ? "ASSERTION FAILED" : "Demo Error";
+        Console.WriteLine($"{prefix}: {label} — {ex.Message}");
         return false;
     }
 }
@@ -100,8 +101,8 @@ if (RunDemo("Demo03 — Layer 3: M7A Strategic Commander", () =>
     Verify(canLaunch, $"Should approve normal launch — reason: {reason}");
 
     commander.ActivateSafeLock();
-    var (blocked, _) = commander.EvaluateLaunch(normalMetrics);
-    Verify(!blocked, "SAFE_LOCK must block all launches");
+    var (canLaunchWhenSafeLocked, _) = commander.EvaluateLaunch(normalMetrics);
+    Verify(!canLaunchWhenSafeLocked, "SAFE_LOCK must block all launches");
 
     commander.ReleaseSafeLock();
     var (released, _) = commander.EvaluateLaunch(normalMetrics);
@@ -194,8 +195,8 @@ if (RunDemo("Demo08 — Layer 8: Sovereign Control Plane", () =>
     plane.ActivateSafeLock("Emergency protocol");
     Verify(plane.Mode == SovereignMode.SAFE_LOCK, "Mode must be SAFE_LOCK");
 
-    var blocked = plane.IssueCommand("CMD-002", "blocked command", AgentRole.FORGE);
-    Verify(!blocked, "Commands must be blocked in SAFE_LOCK");
+    var issuedDuringSafeLock = plane.IssueCommand("CMD-002", "blocked command", AgentRole.FORGE);
+    Verify(!issuedDuringSafeLock, "Commands must be blocked in SAFE_LOCK");
 
     plane.ReleaseSafeLock();
     Verify(plane.Mode == SovereignMode.NORMAL, "Mode must return to NORMAL after release");
@@ -434,12 +435,12 @@ if (RunDemo("Demo18 — Layer 18: Fault Tolerance & Circuit Breaker", () =>
     Verify(ok, "Successful operation must be reported as success");
 
     int callCount = 0;
-    var (fail, _) = ftm.ExecuteWithProtection("svc-B", () =>
+    var (succeeded, _) = ftm.ExecuteWithProtection("svc-B", () =>
     {
         callCount++;
         return false;
     });
-    Verify(!fail, "Operation that always returns false should report failure");
+    Verify(!succeeded, "Operation that always returns false should report failure");
     Verify(callCount == 2, $"RetryPolicy with maxAttempts=2 must execute exactly 2 times total — got {callCount}");
 })) totalPassed++; else totalFailed++;
 
