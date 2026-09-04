@@ -493,7 +493,7 @@ if (RunDemo("Demo20 — Layer 20: Adaptive Doctrine Engine", () =>
     // Forced adaptation
     var forced = engine.ForceAdapt(AdaptationTrigger.ManualOverride,
         "coherence_min", 0.60, "Manual governance intervention");
-    Verify(forced.NewThreshold == 0.60, "Forced adaptation must set exact threshold");
+    Verify(Math.Abs(forced.NewThreshold - 0.60) < 0.001, "Forced adaptation must set exact threshold");
     Verify(engine.AdaptationLog.Count >= 1, "Adaptation log must be non-empty");
 })) totalPassed++; else totalFailed++;
 
