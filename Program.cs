@@ -353,7 +353,7 @@ if (RunDemo("Demo15 — Layer 15: Will-Source Pipeline", () =>
     Verify(stone != null, "Successful intent must produce a MeaningStone");
     Verify(coherence > 0, "Coherence score must be positive");
     Verify(!string.IsNullOrEmpty(stone!.StoneId), "MeaningStone must have a valid ID");
-    Verify(stone.Version == 1, "Freshly created MeaningStone must have version 1");
+    Verify(stone != null && stone.Version == 1, "Freshly created MeaningStone must have version 1");
 
     // Multiple intents produce independent stones
     var intent2 = new WillSourceIntent("WSI-002", "Run resilience certification", 0.7, DateTime.UtcNow);
