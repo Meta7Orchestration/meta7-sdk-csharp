@@ -118,7 +118,7 @@ if (RunDemo("Demo04 — Layer 4: Strategic Cognitive Loop", () =>
     Verify(strongResult.Success, "Strong signal should produce PROCEED decision");
     Verify(strongResult.Decision == "PROCEED", "Decision must be PROCEED");
     Verify(strongResult.Output != null, "WillForm output must be generated on PROCEED");
-    Verify(strongResult.SignalStrength == 0.9, "SignalStrength must be reflected in result");
+    Verify(Math.Abs(strongResult.SignalStrength - 0.9) < 1e-9, "SignalStrength must be reflected in result");
 
     // Low signal still produces a PROCEED result (threshold=0.25 is easily met)
     var lowResult = loop.Run("Background maintenance", signalStrength: 0.1);
