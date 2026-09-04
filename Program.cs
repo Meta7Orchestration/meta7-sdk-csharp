@@ -589,7 +589,7 @@ if (RunDemo("Demo27 — Layer 27: Adaptive Doctrine Under Chaos", () =>
     Verify(result.AdaptationEvents > 0,
         $"Doctrine must adapt at least once in 10 chaos rounds — events={result.AdaptationEvents}");
     Verify(result.SnapshotRestoreWorks, "Snapshot restore must work correctly after chaos");
-    Verify(result.ThresholdDecreased || result.FinalErrorThreshold != result.InitialErrorThreshold,
+    Verify(result.ThresholdDecreased || Math.Abs(result.FinalErrorThreshold - result.InitialErrorThreshold) > 1e-9,
         "Threshold must change after chaos adaptations");
 })) totalPassed++; else totalFailed++;
 
