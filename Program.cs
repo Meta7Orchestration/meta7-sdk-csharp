@@ -434,7 +434,7 @@ if (RunDemo("Demo18 — Layer 18: Fault Tolerance & Circuit Breaker", () =>
     Verify(ok, "Successful operation must be reported as success");
 
     int callCount = 0;
-    var (fail, msg) = ftm.ExecuteWithProtection("svc-B", () =>
+    var (fail, _) = ftm.ExecuteWithProtection("svc-B", () =>
     {
         callCount++;
         return false;
