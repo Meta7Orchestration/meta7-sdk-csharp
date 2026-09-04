@@ -327,7 +327,7 @@ namespace META7.CaptainM7A.CognitiveCivilization
         /// Full constitutional review of an action.
         /// Returns BLOCK if any critical article fails.
         /// </summary>
-        public ConstitutionalReview[] ReviewAction(
+        public ConstitutionalReview[] PerformReview(
             string actionDescription,
             WillAlignment alignment,
             ExplainableArtifact? explainability = null)
@@ -413,7 +413,7 @@ namespace META7.CaptainM7A.CognitiveCivilization
                 alignment.OverallAlignment);
 
             // Step 3: Constitutional Review
-            var reviews = _constitution.ReviewAction(actionDescription, alignment, artifact);
+            var reviews = _constitution.PerformReview(actionDescription, alignment, artifact);
             var allowed = _constitution.IsActionAllowed(reviews);
 
             return new PolicyDecision(

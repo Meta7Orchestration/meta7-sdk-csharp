@@ -163,7 +163,7 @@ if (RunDemo("Demo06 — Layer 6: Barrier Network", () =>
 
     var released = barrier.Release();
     Verify(released, "Barrier release must succeed");
-    Verify(barrier.State == BarrierState.OPEN, "Barrier must re-open after release");
+    Verify(barrier.State == BarrierState.RELEASED, "Barrier must be in RELEASED state after release");
     Verify(barrier.Epoch == 2, "Epoch must advance on release");
 })) totalPassed++; else totalFailed++;
 

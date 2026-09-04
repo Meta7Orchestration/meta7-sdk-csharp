@@ -11,4 +11,9 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="META7.SDK/**/*.cs" />
+    <Compile Remove="AcrobaticDemo.cs" />
+  </ItemGroup>
+
 </Project>
