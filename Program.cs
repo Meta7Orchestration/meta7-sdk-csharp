@@ -32,7 +32,7 @@ static bool RunDemo(string label, Action demo)
         Console.WriteLine($"✅ {label} passed");
         return true;
     }
-    catch (Exception ex)
+    catch (InvalidOperationException ex)
     {
         Console.WriteLine($"ASSERTION FAILED: {label} — {ex.Message}");
         return false;
